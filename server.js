@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const { Pool, Client } = require('pg')
-const connectionString = 'postgres://ayyvcwchmrurnb:264a3eda25309c1f4215fbc81775ad1c5b895de1186948191a9f5ff10f59d5cc@ec2-52-209-185-5.eu-west-1.compute.amazonaws.com:5432/d330suqhj2o773'
+const connectionString = process.env.PSQL_URI
 
 const con = new Client({
 	connectionString,
