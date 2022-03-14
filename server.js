@@ -27,8 +27,7 @@ function createtable(tablename) {
 		;
 	});
 }
-function droptable(tablename)
-{
+function droptable(tablename) {
 	con.query('DROP TABLE ' + tablename, (err, res) => {
 		if (err) {
 			console.error(err);
@@ -82,7 +81,8 @@ async function insert(insertquery) {
 	});
 }
 
-function addtorunning(channel) { running.push(channel) 
+function addtorunning(channel) {
+	running.push(channel)
 }
 
 var data = [];
@@ -94,7 +94,7 @@ function isin(channelid) {
 		if (running[i] === channelid) {
 			result = true
 		}
-		
+
 	}
 	return result
 }
@@ -111,8 +111,7 @@ function resetStatus(channelid) {
 }
 client.connect().catch(console.error);
 client.on('message', (channel, user, message, self) => {
-	if (message === '!droptable' && user.username === 'frtim1908')
-	{
+	if (message === '!droptable' && user.username === 'frtim1908') {
 		droptable('channelcounter');
 		client.say(channel, "Database table dropped")
 	}
@@ -123,50 +122,51 @@ client.on('message', (channel, user, message, self) => {
 	channelname = channel.replace('#', '')
 	if (self) return;
 	if (!isin(channel) && (message.startsWith('+yellow')) && (user.mod || user['user-type'] === 'mod' || user.username === channelname)) {
-			var date = new Date();
-			var today = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
-			
-			current = {};
-			newentry = ""
-			message = ""
-			addtorunning(channel)
-			setTimeout(function () {
-				for (var i = 0; i < running.length; i++) {
+		var date = new Date();
+		var today = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
 
-					if (running[i] === channel) {
+		current = {};
+		newentry = ""
+		message = ""
+		addtorunning(channel)
+		setTimeout(function () {
+			for (var i = 0; i < running.length; i++) {
 
-						running.splice(i, 1);
-					}
+				if (running[i] === channel) {
 
-				}}, 30000);		
-			function main() { }
-			(async () => {
-				let insertquery = ""
-				current = await select(channel);
-				console.log(current)
-				if (current == null) {
-					newentry = "'" + channel + "',1,1,'" + today + "'"
-					insertquery = "INSERT INTO channelcounter (channelname, counter, dailycounter, last_updated) VALUES (" + newentry + ")"
-					message = channelname + " has failed to click yellow. " + channelname + " has failed to click yellow 1 time today and 1 time in total."
+					running.splice(i, 1);
+				}
+
+			}
+		}, 30000);
+		function main() { }
+		(async () => {
+			let insertquery = ""
+			current = await select(channel);
+			console.log(current)
+			if (current == null) {
+				newentry = "'" + channel + "',1,1,'" + today + "'"
+				insertquery = "INSERT INTO channelcounter (channelname, counter, dailycounter, last_updated) VALUES (" + newentry + ")"
+				message = channelname + " has failed to click yellow. " + channelname + " has failed to click yellow 1 time today and 1 time in total."
+			}
+			else {
+				currentdate = current['last_updated'].getFullYear() + '-' + (current['last_updated'].getMonth() + 1) + '-' + current['last_updated'].getDate();
+				if (currentdate == today) {
+					insertquery = "UPDATE channelcounter SET counter = " + (current['counter'] + 1) + ", dailycounter = " + (current['dailycounter'] + 1) + " WHERE channelname = '" + channel + "'"
+					message = channelname + " has failed to click yellow. " + channelname + " has failed to click yellow " + (current['dailycounter'] + 1) + " times today and " + (current['counter'] + 1) + " times in total."
 				}
 				else {
-					currentdate = current['last_updated'].getFullYear() + '-' + (current['last_updated'].getMonth() + 1) + '-' + current['last_updated'].getDate();
-					if (currentdate == today) {
-						insertquery = "UPDATE channelcounter SET counter = " + (current['counter'] + 1) + ", dailycounter = " + (current['dailycounter'] + 1) + " WHERE channelname = '" + channel + "'"
-						message = channelname + " has failed to click yellow. " + channelname + " has failed to click yellow " + (current['dailycounter'] + 1) + " times today and " + (current['counter'] + 1) + " times in total."
-					}
-					else {
-						newentry = (current['counter'] + 1) + ",1," + "'" + today + "'"
-						let value = 2
-						insertquery = "UPDATE channelcounter SET counter = " + (current['counter'] + 1) + ", dailycounter = 1, last_updated = '" + today + "' WHERE channelname = '" + channel + "'"
-						message = channelname + " has failed to click yellow. " + channelname + " has failed to click yellow 1 time today and " + (current['counter'] + 1) + " times in total."
-					}
+					newentry = (current['counter'] + 1) + ",1," + "'" + today + "'"
+					let value = 2
+					insertquery = "UPDATE channelcounter SET counter = " + (current['counter'] + 1) + ", dailycounter = 1, last_updated = '" + today + "' WHERE channelname = '" + channel + "'"
+					message = channelname + " has failed to click yellow. " + channelname + " has failed to click yellow 1 time today and " + (current['counter'] + 1) + " times in total."
 				}
-				console.log(insertquery);
-				await insert(insertquery);
-				console.log("Done")
-				client.say(channel, message);
-			})();
-		}
+			}
+			console.log(insertquery);
+			await insert(insertquery);
+			console.log("Done")
+			client.say(channel, message);
+		})();
+	}
 
 });
