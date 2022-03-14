@@ -111,19 +111,44 @@ function resetStatus(channelid) {
 }
 client.connect().catch(console.error);
 client.on('message', (channel, user, message, self) => {
-	if (message === '!droptable' && user.username === 'frtim1908') {
-		droptable('channelcounter');
-		client.say(channel, "Database table dropped")
-	}
-	if (message === '!createtable' && user.username === 'frtim1908') {
-		createtable('channelcounter');
-		client.say(channel, "Database table created")
-	}
+	//if (message == '!resetcounter') {
+	//	function main() { }
+	//	(async () => {
+	//		var date = new Date();
+	//		var today = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+	//		insertquery = "UPDATE channelcounter SET counter = 0, dailycounter = 0, last_updated = '" + today + "' WHERE channelname = '" + channel + "'"
+	//		await insert(insertquery);
+	//		console.log("Done")
+	//	})();
+	//}
 	channelname = channel.replace('#', '')
+	var date = new Date();
+	var today = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+	if (message.startsWith('!yellows')){
+		var reply = ""
+		function main() { }
+			(async () => {
+				current = await select(channel);
+				if (current == null) {
+					reply = channelname + " has failed to click yellow 0 times today and 0 time in total."
+				}
+				else {
+					currentdate = current['last_updated'].getFullYear() + '-' + (current['last_updated'].getMonth() + 1) + '-' + current['last_updated'].getDate();
+					if (currentdate == today) {
+						reply = channelname + " has failed to click yellow " + current['dailycounter'] + " time" + (current['dailycounter'] == 1 ? "" : "s") + " today and " + current['counter'] + " time" + (current['counter'] == 1 ? "" : "s") + " in total."
+					}
+					else {
+						reply = channelname + " has failed to click yellow 0 times today and " + current['counter'] + " time" + (current['counter'] == 1 ? "" : "s") + " in total."
+					}
+				}
+				client.say(channel, reply);
+			})();
+			
+	}
+	
 	if (self) return;
 	if (!isin(channel) && (message.startsWith('+yellow')) && (user.mod || user['user-type'] === 'mod' || user.username === channelname)) {
-		var date = new Date();
-		var today = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+		
 
 		current = {};
 		newentry = ""
