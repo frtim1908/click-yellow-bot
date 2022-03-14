@@ -2,12 +2,15 @@ require('dotenv').config();
 
 const { Pool, Client } = require('pg')
 const connectionString = process.env.PSQL_URI
-
+var running = [];
 const con = new Client({
 	connectionString,
 	ssl: { rejectUnauthorized: false }
 })
-const createquery = `CREATE TABLE IF NOT EXISTS channelcounter (
+
+con.connect();
+function createtable(tablename) {
+	const createquery = `CREATE TABLE IF NOT EXISTS ` + tablename + ` (
 	id serial PRIMARY KEY,
 	channelname VARCHAR(50) UNIQUE NOT NULL,
 	counter INTEGER,
@@ -15,15 +18,26 @@ const createquery = `CREATE TABLE IF NOT EXISTS channelcounter (
 	last_updated DATE
 );
 `;
-con.connect();
-con.query(createquery, (err, res) => {
-	if (err) {
-		console.error(err);
-		return;
-	}
-	console.log('Table is successfully created');
-	//con.end();
-});
+	con.query(createquery, (err, res) => {
+		if (err) {
+			console.error(err);
+			return;
+		}
+		console.log('Table is successfully created');
+		;
+	});
+}
+function droptable(tablename)
+{
+	con.query('DROP TABLE ' + tablename, (err, res) => {
+		if (err) {
+			console.error(err);
+			return;
+		}
+		console.log('Table is successfully deleted');
+		;
+	});
+}
 
 async function select(channelname) {
 
@@ -38,20 +52,10 @@ async function select(channelname) {
 		await con.end();
 	}
 	return
-	
+
 
 }
-//async function select(channelname) {
-//	let response
-//	try {
-//		const response = await con.query("SELECT * FROM channelcounter WHERE channelname = '" + channelname + "'");
-//		return response.rows;
-//	}
-//	catch (error) {
-//		console.log(error)
-//	}
-			
-//}
+
 
 const tmi = require('tmi.js');
 const client = new tmi.Client({
@@ -64,15 +68,9 @@ const client = new tmi.Client({
 		username: process.env.TWITCH_BOT_USERNAME,
 		password: process.env.TWITCH_OAUTH_TOKEN
 	},
-	channels: ['FrTim1908']
+	channels: ['FrTim1908', 'Ja_Brownie']
 });
-//client.connect().catch(console.error);
-//client.on('message', (channel, tags, message, self) => {
-//	var date = new Date();
-//	var today = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
-//const insertquery = "INSERT INTO channelcounter (channelname, counter, dailycounter, last_updated) VALUES ('" + channel + "', 1, 1, '" + today + "')"
-//	var values = [[channel, 1, 1, today], ["test", 1, 1, today]]
-//	console.log(insertquery)
+
 async function insert(insertquery) {
 	await con.query(insertquery, (err, res) => {
 		if (err) {
@@ -84,28 +82,64 @@ async function insert(insertquery) {
 	});
 }
 
-	//var fs = require('fs');
-	var data = [];
-	var current = {}
-	var running = false;
+function addtorunning(channel) { running.push(channel) 
+}
 
+var data = [];
+var current = {}
+function isin(channelid) {
+	result = false
+	for (var i = 0; i < running.length; i++) {
 
-	function resetStatus() { running = false; }
+		if (running[i] === channelid) {
+			result = true
+		}
+		
+	}
+	return result
+}
+function resetStatus(channelid) {
+	for (var i = 0; i < running.length; i++) {
 
+		if (running[i] === channelid) {
+
+			running.splice(i, 1);
+		}
+
+	}
+
+}
 client.connect().catch(console.error);
-client.on('message', (channel, tags, message, self) => {
-
+client.on('message', (channel, user, message, self) => {
+	if (message === '!droptable' && user.username === 'frtim1908')
+	{
+		droptable('channelcounter');
+		client.say(channel, "Database table dropped")
+	}
+	if (message === '!createtable' && user.username === 'frtim1908') {
+		createtable('channelcounter');
+		client.say(channel, "Database table created")
+	}
+	channelname = channel.replace('#', '')
 	if (self) return;
-	if (!running) {
-		if (message.startsWith('!bottest')) {
+	if (!isin(channel) && (message.startsWith('+yellow')) && (user.mod || user['user-type'] === 'mod' || user.username === channelname)) {
 			var date = new Date();
 			var today = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
-			channelname = channel.replace('#', '')
+			
 			current = {};
 			newentry = ""
 			message = ""
-			setTimeout(resetStatus, 30000);
-			//running = true;
+			addtorunning(channel)
+			setTimeout(function () {
+				for (var i = 0; i < running.length; i++) {
+
+					if (running[i] === channel) {
+
+						running.splice(i, 1);
+					}
+
+				}}, 30000);		
+			function main() { }
 			(async () => {
 				let insertquery = ""
 				current = await select(channel);
@@ -124,8 +158,7 @@ client.on('message', (channel, tags, message, self) => {
 					else {
 						newentry = (current['counter'] + 1) + ",1," + "'" + today + "'"
 						let value = 2
-						//insertquery = "UPDATE channelcounter SET counter = 3, dailycounter = 2 WHERE channelname = '#frtim1908'"
-						insertquery = "UPDATE channelcounter SET counter = " + (current['counter'] + 1) + ", dailycounter = 1, last_updated = " + today + " WHERE channelname = '" + channel + "'"
+						insertquery = "UPDATE channelcounter SET counter = " + (current['counter'] + 1) + ", dailycounter = 1, last_updated = '" + today + "' WHERE channelname = '" + channel + "'"
 						message = channelname + " has failed to click yellow. " + channelname + " has failed to click yellow 1 time today and " + (current['counter'] + 1) + " times in total."
 					}
 				}
@@ -133,10 +166,7 @@ client.on('message', (channel, tags, message, self) => {
 				await insert(insertquery);
 				console.log("Done")
 				client.say(channel, message);
-
-
 			})();
 		}
-	}
 
 });
